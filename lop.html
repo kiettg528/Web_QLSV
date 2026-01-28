@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Quản Lý Danh Mục Lớp</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h4 class="text-primary mb-0">QUẢN LÝ DANH MỤC LỚP</h4>
+                <button class="btn btn-primary" onclick="showAddLopModal()">+ Thêm Lớp</button>
+            </div>
+            <div class="card-body">
+                <input type="text" id="search" class="form-control mb-3" placeholder="Tìm tên lớp hoặc khoa...">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th width="10%">ID</th>
+                            <th>Tên Lớp</th>
+                            <th>Thuộc Khoa</th>
+                            <th width="20%">Hành Động</th>
+                        </tr>
+                    </thead>
+                    <tbody id="lopTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalLop" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thông Tin Lớp Học</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="idLop">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên Lớp</label>
+                        <input type="text" id="tenLop" class="form-control" placeholder="Ví dụ: 23IT">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Chọn Khoa</label>
+                        <select id="selectKhoa" class="form-select">
+                            <option value="">-- Chọn Khoa --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" id="btnSaveLop" class="btn btn-success">Lưu</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            loadLop();
+            loadKhoaSelect();
+
+            function loadLop() {
+                // Đổi từ danh_muc_api.php sang lop_api.php
+                $.post("lop_api.php", { action: "fetch_lop" }, function (data) {
+                    let rows = "";
+                    let items = JSON.parse(data);
+                    $.each(items, function (i, v) {
+                        rows += `<tr class="text-center">
+                <td>${v.id}</td>
+                <td class="text-start fw-bold">${v.ten_lop}</td>
+                <td><span class="badge bg-info text-dark">${v.ten_khoa || 'N/A'}</span></td>
+                <td>
+                    <button class="btn btn-warning btn-sm btnEditLop" data-id="${v.id}" data-ten="${v.ten_lop}" data-khoaid="${v.khoa_id}">Sửa</button>
+                    <button class="btn btn-danger btn-sm btnDeleteLop" data-id="${v.id}">Xóa</button>
+                </td>
+            </tr>`;
+                    });
+                    $("#lopTableBody").html(rows);
+                });
+            }
+
+            function loadKhoaSelect() {
+                // Đổi action thành fetch_khoa_list cho khớp với lop_api.php
+                $.post("lop_api.php", { action: "fetch_khoa_list" }, function (data) {
+                    let options = '<option value="">-- Chọn Khoa --</option>';
+                    $.each(JSON.parse(data), function (i, v) {
+                        options += `<option value="${v.id}">${v.ten_khoa}</option>`;
+                    });
+                    $("#selectKhoa").html(options);
+                });
+            }
+
+            $("#btnSaveLop").click(function () {
+                let id = $("#idLop").val();
+                // Đổi action thành insert/update cho khớp với lop_api.php
+                let action = id ? "update" : "insert";
+                $.post("lop_api.php", {
+                    action: action,
+                    id: id,
+                    ten_lop: $("#tenLop").val(),
+                    khoa_id: $("#selectKhoa").val()
+                }, function () {
+                    $("#modalLop").modal("hide");
+                    loadLop();
+                });
+            });
+
+            $(document).on("click", ".btnEditLop", function () {
+                $("#idLop").val($(this).data("id"));
+                $("#tenLop").val($(this).data("ten"));
+                $("#selectKhoa").val($(this).data("khoaid"));
+                $(".modal-title").text("Chỉnh Sửa Lớp Học");
+                $("#modalLop").modal("show");
+            });
+
+            $(document).on("click", ".btnDeleteLop", function () {
+                if (confirm("Xóa lớp này sẽ ảnh hưởng đến dữ liệu sinh viên. Tiếp tục?")) {
+                    // Đổi action thành delete cho khớp với lop_api.php
+                    $.post("lop_api.php", { action: "delete", id: $(this).data("id") }, function () {
+                        loadLop();
+                    });
+                }
+            });
+
+            $("#search").on("keyup", function () {
+                let val = $(this).val().toLowerCase();
+                $("#lopTableBody tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(val) > -1);
+                });
+            });
+        });
+
+        function showAddLopModal() {
+            $("#idLop").val("");
+            $("#tenLop").val("");
+            $("#selectKhoa").val("");
+            $(".modal-title").text("Thêm Lớp Mới");
+            $("#modalLop").modal("show");
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Quản Lý Điểm Số</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h4 class="text-primary mb-0">QUẢN LÝ ĐIỂM SINH VIÊN</h4>
+                <button class="btn btn-success" onclick="showAddModal()">+ Nhập Điểm Mới</button>
+            </div>
+            <div class="card-body">
+                <table class="table table-striped border">
+                    <thead class="table-dark text-center">
+                        <tr>
+                            <th>ID</th>
+                            <th>Sinh Viên</th>
+                            <th>Môn Học</th>
+                            <th>Điểm Số</th>
+                            <th>Thao Tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ketQuaTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalKetQua" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>Nhập Kết Quả Học Tập</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label>Chọn Sinh Viên</label>
+                        <select id="selectSV" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Chọn Môn Học</label>
+                        <select id="selectMH" class="form-select"></select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Điểm (Hệ 10)</label>
+                        <input type="number" step="0.1" id="inputDiem" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btnSave" class="btn btn-primary w-100">Lưu Kết Quả</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            loadKetQua();
+            loadOptions();
+
+            function loadKetQua() {
+                $.post("ket_qua_api.php", { action: "fetch" }, function (data) {
+                    let rows = "";
+                    $.each(JSON.parse(data), function (i, v) {
+                        rows += `<tr>
+                            <td class="text-center">${v.id}</td>
+                            <td>${v.ho_ten}</td>
+                            <td>${v.ten_mon}</td>
+                            <td class="text-center fw-bold text-danger">${v.diem}</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger btnDelete" data-id="${v.id}">Xóa</button>
+                            </td>
+                        </tr>`;
+                    });
+                    $("#ketQuaTable").html(rows);
+                });
+            }
+
+            function loadOptions() {
+                $.post("ket_qua_api.php", { action: "fetch_options" }, function (data) {
+                    let items = JSON.parse(data);
+                    let optSV = "", optMH = "";
+                    $.each(items.sinh_vien, function (i, v) { optSV += `<option value="${v.id}">${v.ho_ten}</option>`; });
+                    $.each(items.mon_hoc, function (i, v) { optMH += `<option value="${v.id}">${v.ten_mon}</option>`; });
+                    $("#selectSV").html(optSV);
+                    $("#selectMH").html(optMH);
+                });
+            }
+
+            $("#btnSave").click(function () {
+                $.post("ket_qua_api.php", {
+                    action: "insert",
+                    sv_id: $("#selectSV").val(),
+                    mh_id: $("#selectMH").val(),
+                    diem: $("#inputDiem").val()
+                }, function () {
+                    $("#modalKetQua").modal("hide");
+                    loadKetQua();
+                });
+            });
+
+            $(document).on("click", ".btnDelete", function () {
+                if (confirm("Xóa kết quả này?")) {
+                    $.post("ket_qua_api.php", { action: "delete", id: $(this).data("id") }, function () {
+                        loadKetQua();
+                    });
+                }
+            });
+        });
+
+        function showAddModal() { $("#modalKetQua").modal("show"); }
+    </script>
+</body>
+
+</html>

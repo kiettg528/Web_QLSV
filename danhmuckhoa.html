@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Quản Lý Khoa</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</head>
+
+<body class="bg-light">
+
+    <div class="container py-5">
+        <h3 class="text-primary mb-4">DANH MỤC KHOA</h3>
+
+        <div class="d-flex justify-content-between mb-3">
+            <input type="text" id="search" class="form-control w-50" placeholder="Tìm kiếm khoa...">
+            <button class="btn btn-primary" onclick="showAddModal()">+ Thêm Khoa</button>
+        </div>
+
+        <table class="table table-bordered bg-white shadow-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Tên Khoa</th>
+                    <th>Mô Tả</th>
+                    <th>Thao Tác</th>
+                </tr>
+            </thead>
+            <tbody id="danhMucTable">
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal fade" id="modalDanhMuc" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thông Tin Khoa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="idDanhMuc">
+                    <div class="mb-3">
+                        <label>Tên Khoa</label>
+                        <input type="text" id="tenDanhMuc" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label>Mô Tả</label>
+                        <textarea id="moTa" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" id="btnSave" class="btn btn-success">Lưu Lại</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            loadDanhMuc();
+
+            function loadDanhMuc() {
+                $.post("danh_muc_api.php", { action: "fetch" }, function (data) {
+                    let rows = "";
+                    let items = JSON.parse(data);
+                    $.each(items, function (i, v) {
+                        rows += `
+                <tr>
+                    <td>${v.id}</td>
+                    <td class="fw-bold">${v.ten_khoa}</td>
+                    <td>${v.mo_ta}</td>
+                    <td>
+                        <button class="btn btn-warning btn-sm btnEdit" 
+                                data-id="${v.id}" 
+                                data-ten="${v.ten_khoa}" 
+                                data-mota="${v.mo_ta}">Sửa</button>
+                        <button class="btn btn-danger btn-sm btnDelete" data-id="${v.id}">Xóa</button>
+                    </td>
+                </tr>`;
+                    });
+                    $("#danhMucTable").html(rows);
+                });
+            }
+
+            /* LƯU (THÊM/SỬA) */
+            $("#btnSave").click(function () {
+                let id = $("#idDanhMuc").val();
+                let action = id ? "update" : "insert";
+
+                $.post("danh_muc_api.php", {
+                    action: action,
+                    id: id,
+                    ten: $("#tenDanhMuc").val(),
+                    moTa: $("#moTa").val()
+                }, function (res) {
+                    $("#modalDanhMuc").modal("hide");
+                    loadDanhMuc();
+                });
+            });
+
+            /* MỞ FORM SỬA */
+            $(document).on("click", ".btnEdit", function () {
+                $("#idDanhMuc").val($(this).data("id"));
+                $("#tenDanhMuc").val($(this).data("ten"));
+                $("#moTa").val($(this).data("mota"));
+                $(".modal-title").text("Chỉnh Sửa Khoa");
+                $("#modalDanhMuc").modal("show");
+            });
+
+            /* XÓA */
+            $(document).on("click", ".btnDelete", function () {
+                let idXoa = $(this).data("id");
+                if (confirm("Bạn có chắc muốn xóa khoa có ID: " + idXoa + "?")) {
+                    $.post("danh_muc_api.php", {
+                        action: "delete",
+                        id: idXoa
+                    }, function (res) {
+                        if (res == 1) {
+                            alert("Xóa thành công!");
+                            loadDanhMuc();
+                        } else {
+                            alert("Lỗi: Không thể xóa dữ liệu này (Có thể do ràng buộc khóa ngoại)");
+                        }
+                    });
+                }
+            });
+
+            /* TÌM KIẾM */
+            $("#search").on("keyup", function () {
+                let value = $(this).val().toLowerCase();
+                $("#danhMucTable tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+
+        function showAddModal() {
+            $("#idDanhMuc").val("");
+            $("#tenDanhMuc").val("");
+            $("#moTa").val("");
+            $(".modal-title").text("Thêm Khoa Mới");
+            $("#modalDanhMuc").modal("show");
+        }
+    </script>
+</body>
+
+</html>
