@@ -11,3 +11,4 @@ if ($conn->connect_error) {
     die("Lỗi kết nối: " . $conn->connect_error);
 }
 ?>
+//Cập nhập dữ liệu
